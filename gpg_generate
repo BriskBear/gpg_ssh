@@ -1,0 +1,20 @@
+#!/usr/bin/bash
+
+HERE=$(dirname $(realpath $0))
+
+gpg --full-generate-key --expert
+master_key=$(gpg -K|tail -n2|head -n1|awk -F'[(,)]' '{print $2}')
+echo -e "\u001b[38;5;100m$master_key created, adding subkey, remember to save!\u001b[0m"
+gpg --expert --edit-key $master_key addkey
+echo -e "\u001b[38;5;100mEnabling ssh support\u001b[0m"
+echo enable-ssh-support >> $HOME/.gnupg/gpg-agent.conf
+echo -e "\u001b[38;5;100mEnabling gpg-agent\u001b[0m"
+ssh-agent 2>&1 >/dev/null
+. $HERE/gpg_ssh.sh
+sudo cp $HERE/gpg_ssh.sh /etc/profile.d/
+keygrip=$(gpg -k --with-keygrip|tail -n2|head -n1|awk '{print $NF}')
+echo -e "\u001b[38;5;100mEnabling $master_key for ssh\u001b[0m"
+echo $keygrip >> $HOME/.gnupg/sshcontrol
+ssh-add -l
+echo -e "\u001b[38;5;100mPlease copy this public-key to the server:\u001b[0m"
+gpg --export-ssh-key $master_key|tee >(xclip)
